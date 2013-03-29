@@ -1,28 +1,23 @@
+// Physics imports
+var b2Vec2 = Box2D.Common.Math.b2Vec2
+  , b2AABB = Box2D.Collision.b2AABB
+	,	b2BodyDef = Box2D.Dynamics.b2BodyDef
+	,	b2Body = Box2D.Dynamics.b2Body
+	,	b2FixtureDef = Box2D.Dynamics.b2FixtureDef
+	,	b2Fixture = Box2D.Dynamics.b2Fixture
+	,	b2World = Box2D.Dynamics.b2World
+	,	b2MassData = Box2D.Collision.Shapes.b2MassData
+	,	b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
+	,	b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
+	,	b2DebugDraw = Box2D.Dynamics.b2DebugDraw
+  , b2MouseJointDef = Box2D.Dynamics.Joints.b2MouseJointDef
+;
+
 // Set up box2d world
-var worldAABB = new b2AABB();
-worldAABB.minVertex.Set(-1000, -1000);
-worldAABB.maxVertex.Set(1000, 1000);
-var gravity = new b2Vec2(1, 1);
-var doSleep = true;
-var world = new b2World(worldAABB, gravity, doSleep);
+var world = new b2World(new b2Vec2(0, 0), true);
 
 // Global reference to bodies
 var bodies = {};
-
-function createBox(world, x, y, width, height, fixed) {
-	if (typeof(fixed) == 'undefined') fixed = true;
-	var boxSd = new b2BoxDef();
-	if (!fixed) {
-    boxSd.density = 1.0;
-    boxSd.friction = 0.5;
-    boxSd.restitution = 0.2;
-  }
-	boxSd.extents.Set(width, height);
-	var boxBd = new b2BodyDef();
-	boxBd.AddShape(boxSd);
-	boxBd.position.Set(x,y);
-	return world.CreateBody(boxBd);
-}
 
 // Components
 Crafty.c("Boat", {
@@ -33,13 +28,28 @@ Crafty.c("Boat", {
       .attr({w: 20, h: 50, x: 50, y: 50})
       .origin("center");
     
-    // Create box2d box to handle physics
-    var boat_box = createBox(world, this.x, this.y, this.w, this.h, false);
-    bodies["boat"] = boat_box;
+    // Create box2d box to handle physics    
+    // Box fixture
+    var fixDef = new b2FixtureDef;
+    fixDef.density = 1.0;
+    fixDef.friction = 0.5;
+    fixDef.restitution = 0.2;
+    fixDef.shape = new b2PolygonShape;
+    fixDef.shape.SetAsBox(this.w, this.h);
     
+    // Box body
+    var bodyDef = new b2BodyDef;
+    bodyDef.type = b2Body.b2_dynamicBody;
+    bodyDef.position.x = this.x;
+    bodyDef.position.y = this.y;
+    
+    // Add box to the world and keep global reference in bodies
+    bodies["boat"] = world.CreateBody(bodyDef).CreateFixture(fixDef);
+    
+    // Match sprite's position and angle with the box2d body
     this.bind("EnterFrame", function() {
-      position = boat_box.GetCenterPosition();
-      angle = boat_box.GetRotation();
+      position = bodies["boat"].GetBody().GetPosition();
+      angle = bodies["boat"].GetBody().GetAngle();
       this.x = position.x;
       this.y = position.y;
       this.rotation = angle;
@@ -54,28 +64,25 @@ Crafty.c("PhysicsWorld", {
     this.requires("2D, Canvas, Mouse");
     this.attr({w: 600, h: 500});
     
-    // Step the world each frame
-    this.bind("EnterFrame", function() {
-    	world.Step(this.timeStep, this.iteration);
-    });
-    
     // Create wind vector on click
     this.bind("MouseDown", function(event) {
       console.log("mouse x: " + event.x + ", mouse y: " + event.y);
-      boat = bodies["boat"];
-      force = new b2Vec2(1000, 1000);
-      boat.ApplyForce(force, boat.GetCenterPosition());
+      boat = bodies["boat"].GetBody();
+      force = new b2Vec2(10000, 10000);
+      boat.ApplyForce(force, boat.GetPosition());
+    });
+    
+    // Step the world each frame
+    this.bind("EnterFrame", function() {
+    	world.Step(this.timeStep, this.iteration);
     });
   }
 });
 
 // Main scene
 Crafty.scene("main", function() {
-  
-  // Create the boat entity
   var world = Crafty.e("PhysicsWorld");
   var boat = Crafty.e("Boat");
-    
 });
 
 window.onload = function () {
