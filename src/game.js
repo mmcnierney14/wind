@@ -2,7 +2,7 @@
 var worldAABB = new b2AABB();
 worldAABB.minVertex.Set(-1000, -1000);
 worldAABB.maxVertex.Set(1000, 1000);
-var gravity = new b2Vec2(0, 0);
+var gravity = new b2Vec2(1, 1);
 var doSleep = true;
 var world = new b2World(worldAABB, gravity, doSleep);
 
@@ -38,8 +38,8 @@ Crafty.c("Boat", {
     bodies["boat"] = boat_box;
     
     this.bind("EnterFrame", function() {
-      position = boat_box.m_position;
-      angle = boat_box.m_rotation;
+      position = boat_box.GetCenterPosition();
+      angle = boat_box.GetRotation();
       this.x = position.x;
       this.y = position.y;
       this.rotation = angle;
