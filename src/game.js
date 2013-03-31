@@ -31,7 +31,7 @@ Crafty.c("Boat", {
     // Create box2d box to handle physics    
     // Box fixture
     var fixDef = new b2FixtureDef;
-    fixDef.density = 1.0;
+    fixDef.density = 5.0;
     fixDef.friction = 0.5;
     fixDef.restitution = 0.2;
     fixDef.shape = new b2PolygonShape;
@@ -54,35 +54,73 @@ Crafty.c("Boat", {
       this.y = position.y;
       this.rotation = angle;
     });
-  }
+  },
 });
 
 Crafty.c("PhysicsWorld", {
   timeStep: 1.0/60,
   iteration: 1,
+  fx: 0,
+  fy: 0,
+  force: null,
+
   init: function() {
     this.requires("2D, Canvas, Mouse");
     this.attr({w: 600, h: 500});
     
     // Create wind vector on click
     this.bind("MouseDown", function(event) {
-      console.log("mouse x: " + event.x + ", mouse y: " + event.y);
+      console.log("TEST 1");
+      console.log("mouse x: " + (event.x - 390) + ", mouse y: " + (event.y - 5));
+
       boat = bodies["boat"].GetBody();
-      force = new b2Vec2(10000, 10000);
+      console.log(boat.GetMass());
+      var Bx = boat.GetPosition().x;
+      var By = boat.GetPosition().y;
+      console.log("boat x: " + boat.GetPosition().x + " boat y: " + boat.GetPosition().y);
+      var Mx = event.x - 390;
+      var My = event.y - 5;
+
+      var fc = 10000;
+      var hypotenuse = Math.sqrt((Bx-Mx)*(Bx-Mx) + (By-My) * (By-My));
+      console.log("hypotenuse is " + hypotenuse);
+
+      var xSide = (Bx - Mx);
+      var ySide = (By - My);
+      console.log("y side is " + ySide);
+      var theta = Math.asin(ySide/hypotenuse);
+      console.log("theta is " + theta);
+      
+      this.fx = fc * hypotenuse * Math.cos(theta);
+      this.fy = fc * hypotenuse * Math.sin(theta);
+      if (Mx > Bx) {
+        this.fx = -this.fx;
+      }
+ 
+      force = new b2Vec2(this.fx, this.fy);
+      console.log("MouseDown force: " + force.x);
+
       boat.ApplyForce(force, boat.GetPosition());
+      console.log("   ");
+    });
+
+    //Stop the force from going once the mouse is let up
+    this.bind("MouseUp", function(event) {
+      force = new b2Vec2(0, 0);
+      console.log("MouseUp force: " + force.x);
     });
     
     // Step the world each frame
     this.bind("EnterFrame", function() {
     	world.Step(this.timeStep, this.iteration);
     });
-  }
+  },
 });
 
 // Main scene
 Crafty.scene("main", function() {
-  var world = Crafty.e("PhysicsWorld");
   var boat = Crafty.e("Boat");
+  var world = Crafty.e("PhysicsWorld");
 });
 
 window.onload = function () {
