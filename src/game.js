@@ -25,14 +25,14 @@ Crafty.c("Boat", {
   init: function() {
     this.requires("2D, Canvas, Color")
       .color('rgb(255,0,0)')
-      .attr({w: 20, h: 50, x: 50, y: 50})
+      .attr({w: 50, h: 50, x: 50, y: 50})
       .origin("center");
     
     // Create box2d box to handle physics    
     // Box fixture
     var fixDef = new b2FixtureDef;
     fixDef.density = 1.0;
-    fixDef.friction = 0.5;
+    fixDef.friction = 5.0;
     fixDef.restitution = 0.2;
     fixDef.shape = new b2PolygonShape;
     fixDef.shape.SetAsBox(this.w, this.h);
@@ -42,6 +42,8 @@ Crafty.c("Boat", {
     bodyDef.type = b2Body.b2_dynamicBody;
     bodyDef.position.x = this.x;
     bodyDef.position.y = this.y;
+    // bodyDef.linearDamping = 0.03;
+    // bodyDef.gravityScale = 0;
     
     // Add box to the world and keep global reference in bodies
     bodies["boat"] = world.CreateBody(bodyDef).CreateFixture(fixDef);
@@ -54,35 +56,73 @@ Crafty.c("Boat", {
       this.y = position.y;
       this.rotation = angle;
     });
-  }
+  },
 });
 
 Crafty.c("PhysicsWorld", {
   timeStep: 1.0/60,
+  pixels_per_meter: 3,
   iteration: 1,
+  fx: 0,
+  fy: 0,
+  force: null,
+
   init: function() {
     this.requires("2D, Canvas, Mouse");
     this.attr({w: 600, h: 500});
-    
-    // Create wind vector on click
-    this.bind("MouseDown", function(event) {
-      console.log("mouse x: " + event.x + ", mouse y: " + event.y);
-      boat = bodies["boat"].GetBody();
-      force = new b2Vec2(10000, 10000);
-      boat.ApplyForce(force, boat.GetPosition());
-    });
     
     // Step the world each frame
     this.bind("EnterFrame", function() {
     	world.Step(this.timeStep, this.iteration);
     });
-  }
+  
+
+      // Create wind vector on click
+    this.bind("MouseDown", function(event) {
+      timeout = setInterval(function() {
+      
+      boat = bodies["boat"].GetBody();
+      var Bx = boat.GetPosition().x;
+      var By = boat.GetPosition().y;
+      // console.log("boat x: " + boat.GetPosition().x + " boat y: " + boat.GetPosition().y);
+      var Mx = event.x - 390;
+      var My = event.y - 5;
+
+      var fc = 10000;
+      var hypotenuse = Math.sqrt((Bx-Mx)*(Bx-Mx) + (By-My) * (By-My));
+      // console.log("hypotenuse is " + hypotenuse);
+
+      var xSide = (Bx - Mx);
+      var ySide = (By - My);
+      // console.log("y side is " + ySide);
+      var theta = Math.asin(ySide/hypotenuse);
+      // console.log("theta is " + theta);
+      
+      this.fx = fc * hypotenuse * Math.cos(theta);
+      this.fy = fc * hypotenuse * Math.sin(theta);
+      if (Mx > Bx) {
+        this.fx = -this.fx;
+      }
+ 
+      force = new b2Vec2(this.fx, this.fy);
+
+      boat.ApplyForce(force, boat.GetLocalCenter());
+      console.log("X Force is: " + force.x);
+      console.log("Y Force is: " + force.y);
+      }, 100);      
+    });
+
+    //Stop the force from going once the mouse is let up
+    this.bind("MouseUp", function(event) {
+      force = new b2Vec2(0, 0);
+    });
+  },
 });
 
 // Main scene
 Crafty.scene("main", function() {
-  var world = Crafty.e("PhysicsWorld");
   var boat = Crafty.e("Boat");
+  var world = Crafty.e("PhysicsWorld");
 });
 
 window.onload = function () {
