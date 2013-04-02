@@ -1,0 +1,7 @@
+Problems:
+
+1) Applying forces (Does the applied force reevaluate at every instance?)
+					(Does the direction really work?)
+2) How can we employ linear damping to emulate friction?
+3) How can we use a conversion rate to use metric units?
+4) How can make the wind act on the center of the boat, not its top left corner?
